@@ -67,7 +67,9 @@ if(PNG_HARDWARE_OPTIMIZATIONS)
 
 # set definitions and sources for arm
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
-  CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64")
+  CMAKE_SYSTEM_PROCESSOR MATCHES "^aarch64"
+  OR CMAKE_GENERATOR STREQUAL Xcode # MB patch
+  )
   set(PNG_ARM_NEON_POSSIBLE_VALUES check on off)
   set(PNG_ARM_NEON "check" CACHE STRING "Enable ARM NEON optimizations:
      check: (default) use internal checking code;
@@ -86,11 +88,13 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^arm" OR
       arm/filter_neon_intrinsics.c
       arm/palette_neon_intrinsics.c)
 
-    if(${PNG_ARM_NEON} STREQUAL "on")
-      add_definitions(-DPNG_ARM_NEON_OPT=2)
-    elseif(${PNG_ARM_NEON} STREQUAL "check")
-      add_definitions(-DPNG_ARM_NEON_CHECK_SUPPORTED)
-    endif()
+    if ( NOT CMAKE_GENERATOR STREQUAL Xcode ) # MB patch begin
+        if(${PNG_ARM_NEON} STREQUAL "on")
+            add_definitions(-DPNG_ARM_NEON_OPT=2)
+        elseif(${PNG_ARM_NEON} STREQUAL "check")
+            add_definitions(-DPNG_ARM_NEON_CHECK_SUPPORTED)
+        endif()
+    endif() # MB patch end
   else()
     add_definitions(-DPNG_ARM_NEON_OPT=0)
   endif()
@@ -122,7 +126,9 @@ endif()
 
 # set definitions and sources for intel
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
-   CMAKE_SYSTEM_PROCESSOR MATCHES "^x86_64*")
+   CMAKE_SYSTEM_PROCESSOR MATCHES "^x86_64*"
+   OR CMAKE_GENERATOR STREQUAL "Xcode" # MB patch
+)
   set(PNG_INTEL_SSE_POSSIBLE_VALUES on off)
   set(PNG_INTEL_SSE "on" CACHE STRING "Enable INTEL_SSE optimizations:
      off: disable the optimizations")
@@ -136,7 +142,7 @@ if(CMAKE_SYSTEM_PROCESSOR MATCHES "^i?86" OR
     set(libpng_intel_sources
       intel/intel_init.c
       intel/filter_sse2_intrinsics.c)
-    if(${PNG_INTEL_SSE} STREQUAL "on")
+    if(${PNG_INTEL_SSE} STREQUAL "on" AND NOT CMAKE_GENERATOR STREQUAL Xcode) # MB patch
       add_definitions(-DPNG_INTEL_SSE_OPT=1)
     endif()
   else()
@@ -572,6 +578,25 @@ if(PNG_STATIC)
     set_target_properties(png_static PROPERTIES PREFIX "lib")
   endif()
   target_link_libraries(png_static ${ZLIB_LIBRARY} ${M_LIBRARY})
+  # MB patch begin
+  if ( CMAKE_GENERATOR STREQUAL Xcode )
+    string( REPLACE ";" " " ARM_SRCS_XCODE  "${libpng_arm_sources}"    )
+    string( REPLACE ";" " " INTEL_SRCS_XCODE "${libpng_intel_sources}" )
+    set_target_properties( png_static PROPERTIES
+        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=x86_64] "${ARM_SRCS_XCODE}"
+        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=i386]   "${ARM_SRCS_XCODE}"
+        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=armv7]  "${INTEL_SRCS_XCODE}"
+        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=armv7s] "${INTEL_SRCS_XCODE}"
+        XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=arm64]  "${INTEL_SRCS_XCODE}"
+
+        XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=x86_64] "PNG_INTEL_SSE=1"
+        XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=i386]   "PNG_INTEL_SSE=1"
+        XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=armv7]  "PNG_ARM_NEON_OPT=2"
+        XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=armv7s] "PNG_ARM_NEON_OPT=2"
+        XCODE_ATTRIBUTE_GCC_PREPROCESSOR_DEFINITIONS[arch=arm64]  "PNG_ARM_NEON_OPT=2"
+    )
+  endif()
+  # MB patch end
 endif()
 
 if(PNG_FRAMEWORK)
