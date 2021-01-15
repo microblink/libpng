@@ -43,7 +43,7 @@ if(NOT PNG_BUILD_ZLIB)
   include_directories(${ZLIB_INCLUDE_DIR})
 endif()
 
-if(UNIX AND NOT APPLE AND NOT BEOS AND NOT HAIKU)
+if(UNIX AND NOT APPLE AND NOT BEOS AND NOT HAIKU AND NOT EMSCRIPTEN)
   find_library(M_LIBRARY m)
 else()
   # libm is not needed and/or not available
@@ -278,7 +278,7 @@ find_program(AWK NAMES gawk awk)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if(NOT AWK OR ANDROID)
+if(NOT AWK OR ANDROID OR CMAKE_GENERATOR STREQUAL "Xcode") # MB patch
   # No awk available to generate sources; use pre-built pnglibconf.h
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt
                  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h)
@@ -457,7 +457,7 @@ else()
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.chk"
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.out"
     "${CMAKE_CURRENT_BINARY_DIR}/scripts/vers.out")
-endif(NOT AWK OR ANDROID)
+endif(NOT AWK OR ANDROID OR CMAKE_GENERATOR STREQUAL "Xcode") # MB patch
 
 # OUR SOURCES
 set(libpng_public_hdrs
@@ -471,7 +471,7 @@ set(libpng_private_hdrs
   pnginfo.h
   pngstruct.h
 )
-if(AWK AND NOT ANDROID)
+if(AWK AND NOT ANDROID AND NOT CMAKE_GENERATOR STREQUAL "Xcode")
   list(APPEND libpng_private_hdrs "${CMAKE_CURRENT_BINARY_DIR}/pngprefix.h")
 endif()
 set(libpng_sources
