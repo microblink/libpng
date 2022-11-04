@@ -89,10 +89,10 @@ endif()
 if(PNG_HARDWARE_OPTIMIZATIONS)
 
 # Set definitions and sources for ARM.
-if(TARGET_ARCH MATCHES "^arm" OR
-   TARGET_ARCH MATCHES "^aarch64")
-  if(TARGET_ARCH MATCHES "^arm64" OR
-     TARGET_ARCH MATCHES "^aarch64")
+if(TARGET_ARCH MATCHES "arm" OR
+   TARGET_ARCH MATCHES "aarch64")
+  if(TARGET_ARCH MATCHES "arm64" OR
+     TARGET_ARCH MATCHES "aarch64")
     set(PNG_ARM_NEON_POSSIBLE_VALUES on off)
     set(PNG_ARM_NEON "on"
         CACHE STRING "Enable ARM NEON optimizations: on|off; on is default")
@@ -123,8 +123,8 @@ if(TARGET_ARCH MATCHES "^arm" OR
 endif()
 
 # Set definitions and sources for PowerPC.
-if(TARGET_ARCH MATCHES "^powerpc*" OR
-   TARGET_ARCH MATCHES "^ppc64*")
+if(TARGET_ARCH MATCHES "powerpc*" OR
+   TARGET_ARCH MATCHES "ppc64*")
   set(PNG_POWERPC_VSX_POSSIBLE_VALUES on off)
   set(PNG_POWERPC_VSX "on"
       CACHE STRING "Enable POWERPC VSX optimizations: on|off; on is default")
@@ -146,8 +146,8 @@ if(TARGET_ARCH MATCHES "^powerpc*" OR
 endif()
 
 # Set definitions and sources for Intel.
-if(TARGET_ARCH MATCHES "^i?86" OR
-   TARGET_ARCH MATCHES "^x86_64*")
+if(TARGET_ARCH MATCHES "i?86" OR
+   TARGET_ARCH MATCHES "x86_64*")
   set(PNG_INTEL_SSE_POSSIBLE_VALUES on off)
   set(PNG_INTEL_SSE "on"
       CACHE STRING "Enable INTEL_SSE optimizations: on|off; on is default")
@@ -194,27 +194,27 @@ endif()
 else(PNG_HARDWARE_OPTIMIZATIONS)
 
 # Set definitions and sources for ARM.
-if(TARGET_ARCH MATCHES "^arm" OR
-   TARGET_ARCH MATCHES "^aarch64")
-  add_definitions(-DPNG_ARM_NEON_OPT=0)
+if(TARGET_ARCH MATCHES "arm" OR
+   TARGET_ARCH MATCHES "aarch64")
+  add_definitions(-DPNG_ARM_NEON_OPT=1)
 endif()
 
 # Set definitions and sources for PowerPC.
-if(TARGET_ARCH MATCHES "^powerpc*" OR
-   TARGET_ARCH MATCHES "^ppc64*")
-  add_definitions(-DPNG_POWERPC_VSX_OPT=0)
+if(TARGET_ARCH MATCHES "powerpc*" OR
+   TARGET_ARCH MATCHES "ppc64*")
+  add_definitions(-DPNG_POWERPC_VSX_OPT=1)
 endif()
 
 # Set definitions and sources for Intel.
-if(TARGET_ARCH MATCHES "^i?86" OR
-   TARGET_ARCH MATCHES "^x86_64*")
-  add_definitions(-DPNG_INTEL_SSE_OPT=0)
+if(TARGET_ARCH MATCHES "i?86" OR
+   TARGET_ARCH MATCHES "x86_64*")
+  add_definitions(-DPNG_INTEL_SSE_OPT=1)
 endif()
 
 # Set definitions and sources for MIPS.
 if(TARGET_ARCH MATCHES "mipsel*" OR
    TARGET_ARCH MATCHES "mips64el*")
-  add_definitions(-DPNG_MIPS_MSA_OPT=0)
+  add_definitions(-DPNG_MIPS_MSA_OPT=1)
 endif()
 
 endif(PNG_HARDWARE_OPTIMIZATIONS)
@@ -296,7 +296,7 @@ find_program(AWK NAMES gawk awk)
 
 include_directories(${CMAKE_CURRENT_BINARY_DIR})
 
-if(NOT AWK OR ANDROID OR IOS)
+if(NOT AWK OR ANDROID OR IOS OR XCODE)
   # No awk available to generate sources; use pre-built pnglibconf.h
   configure_file(${CMAKE_CURRENT_SOURCE_DIR}/scripts/pnglibconf.h.prebuilt
                  ${CMAKE_CURRENT_BINARY_DIR}/pnglibconf.h)
@@ -508,7 +508,7 @@ else()
                             "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.chk" scripts_symbols_chk
                             "${CMAKE_CURRENT_BINARY_DIR}/scripts/symbols.out" scripts_symbols_out
                             "${CMAKE_CURRENT_BINARY_DIR}/scripts/vers.out" scripts_vers_out)
-endif(NOT AWK OR ANDROID OR IOS)
+endif(NOT AWK OR ANDROID OR IOS OR XCODE)
 
 # List the source code files.
 set(libpng_public_hdrs
@@ -522,7 +522,7 @@ set(libpng_private_hdrs
     pnginfo.h
     pngstruct.h
 )
-if(AWK AND NOT ANDROID AND NOT IOS)
+if(AWK AND NOT ANDROID AND NOT IOS AND NOT XCODE)
   list(APPEND libpng_private_hdrs "${CMAKE_CURRENT_BINARY_DIR}/pngprefix.h")
 endif()
 set(libpng_sources
@@ -629,6 +629,16 @@ if(PNG_STATIC)
     set_target_properties(png_static PROPERTIES PREFIX "lib")
   endif()
   target_link_libraries(png_static ${ZLIB_LIBRARIES} ${M_LIBRARY})
+  # MB patch begin
+  if ( XCODE )
+    string( REPLACE ";" " " excluded_from_intel_build "${libpng_arm_sources}"   )
+    string( REPLACE ";" " " excluded_from_arm_build   "${libpng_intel_sources}" )
+    set_target_properties( png_static PROPERTIES
+      XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=x86_64] "${excluded_from_intel_build}"
+      XCODE_ATTRIBUTE_EXCLUDED_SOURCE_FILE_NAMES[arch=arm64]  "${excluded_from_arm_build}"
+    )
+  endif()
+  # MB patch end
 endif()
 
 if(PNG_FRAMEWORK)

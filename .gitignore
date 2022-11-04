@@ -73,3 +73,6 @@ pngout.png
 
 # Libpng CI artifacts
 out/
+
+# vim files
+*.sw?
