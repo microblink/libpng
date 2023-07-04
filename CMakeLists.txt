@@ -222,9 +222,6 @@ endif(PNG_HARDWARE_OPTIMIZATIONS)
 # Set PNG_LIB_NAME.
 set(PNG_LIB_NAME png${PNGLIB_MAJOR}${PNGLIB_MINOR})
 
-# Distinguish between debug and release builds.
-set(CMAKE_DEBUG_POSTFIX "d")
-
 include(CheckCSourceCompiles)
 option(ld-version-script "Enable linker version script" ON)
 if(ld-version-script AND NOT ANDROID AND NOT APPLE)
