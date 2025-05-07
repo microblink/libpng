@@ -32,7 +32,7 @@
 #endif
 
 #if PNG_LIBPNG_VER < 10603 /* 1.6.3 */
-#  error "pngfix will not work with libpng prior to 1.6.3"
+#  error pngfix requires libpng version 1.6.3 or newer
 #endif
 
 #ifdef PNG_SETJMP_SUPPORTED
@@ -68,7 +68,7 @@
 #endif
 
 #ifndef PNG_MAXIMUM_INFLATE_WINDOW
-#  error "pngfix not supported in this libpng version"
+#  error pngfix requires libpng with PNG_MAXIMUM_INFLATE_WINDOW supported
 #endif
 
 #if ZLIB_VERNUM >= 0x1240
@@ -132,11 +132,6 @@
 
 /* Is it safe to copy? */
 #define SAFE_TO_COPY(chunk) (((chunk) & PNG_U32(0,0,0,32)) != 0)
-
-/* Fix ups for builds with limited read support */
-#ifndef PNG_ERROR_TEXT_SUPPORTED
-#  define png_error(a,b) png_err(a)
-#endif
 
 /********************************* UTILITIES **********************************/
 /* UNREACHED is a value to cause an assert to fail. Because of the way the
